@@ -26,6 +26,11 @@ impl MemoRepository for MemoRepositoryForJson {
     async fn find(&self, id: &str) -> Result<Memo, RepositoryError> {
         let data =
             read::<Memo>(&self.path).map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
+
+        if !data.iter().any(|memo| memo.id == id) {
+            return Err(RepositoryError::NotFound(id.to_string()));
+        }
+
         let option_memo = data
             .iter()
             .find(|&memo| memo.id == id)
@@ -55,6 +60,11 @@ impl MemoRepository for MemoRepositoryForJson {
     async fn delete(&self, id: &str) -> Result<(), RepositoryError> {
         let data =
             read::<Memo>(&self.path).map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
+
+        if !data.iter().any(|memo| memo.id == id) {
+            return Err(RepositoryError::NotFound(id.to_string()));
+        }
+
         let deleted_data = data
             .iter()
             .filter(|&memo| memo.id != id)
