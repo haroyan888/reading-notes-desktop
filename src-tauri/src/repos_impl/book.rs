@@ -4,10 +4,7 @@ use std::path::Path;
 use async_trait::async_trait;
 
 use super::super::entitiy::book::BookInfo;
-use super::super::repos::{
-    book::{BookRepository, BookSearcher, SearchBooksResult},
-    RepositoryError,
-};
+use super::super::repos::book::{BookRepository, BookSearcher, RepositoryError, SearchBooksResult};
 use crate::repos_impl::{read, write};
 
 #[derive(Clone)]
@@ -29,23 +26,30 @@ impl BookRepositoryForJson {
 #[async_trait]
 impl BookRepository for BookRepositoryForJson {
     async fn find(&self, isbn_13: &str) -> Result<BookInfo, RepositoryError> {
-        let data = read::<BookInfo>(&self.path)?;
+        let data =
+            read::<BookInfo>(&self.path).map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
         let option_book = data
             .iter()
             .find(|&book| book.isbn_13 == isbn_13)
-            .ok_or_else(|| RepositoryError::NotFound(format!("isbn:{} is not found", isbn_13)))?;
+            .ok_or_else(|| RepositoryError::NotFound(isbn_13.to_string()))?;
         Ok(option_book.clone())
     }
 
     async fn all(&self) -> Result<Vec<BookInfo>, RepositoryError> {
-        Ok(read(&self.path)?)
+        Ok(read(&self.path).map_err(|e| RepositoryError::Unexpected(e.to_string()))?)
     }
 
     async fn create(&self, payload: BookInfo) -> Result<BookInfo, RepositoryError> {
-        let mut data = read::<BookInfo>(&self.path)?;
+        let mut data =
+            read::<BookInfo>(&self.path).map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
+        if data.iter().any(|book| book.isbn_13 == payload.isbn_13) {
+            return Err(RepositoryError::Registered(payload.isbn_13.clone()));
+        }
         data.push(payload.clone());
-        write::<BookInfo>(&self.path, data)?;
-        let new_data = read::<BookInfo>(&self.path)?;
+        write::<BookInfo>(&self.path, data)
+            .map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
+        let new_data =
+            read::<BookInfo>(&self.path).map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
         let book_info = new_data
             .iter()
             .find(|&book| book.isbn_13 == payload.isbn_13)
@@ -54,13 +58,17 @@ impl BookRepository for BookRepositoryForJson {
     }
 
     async fn delete(&self, isbn_13: &str) -> Result<(), RepositoryError> {
-        let data = read::<BookInfo>(&self.path)?;
+        let data =
+            read::<BookInfo>(&self.path).map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
+        if !data.iter().any(|book| book.isbn_13 == isbn_13) {
+            return Err(RepositoryError::NotFound(isbn_13.to_string()));
+        }
         let removed_data = data
             .iter()
             .filter(|&book| book.isbn_13 != isbn_13)
             .cloned()
             .collect::<Vec<BookInfo>>();
-        write(&self.path, removed_data)?;
+        write(&self.path, removed_data).map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
         Ok(())
     }
 }
@@ -83,10 +91,7 @@ impl BookSearcher for BookSearcherForGoogleAPI {
             .map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
 
         if search_books_result.items.is_empty() {
-            return Err(RepositoryError::NotFound(format!(
-                "isbn13:{} is not found.",
-                isbn_13
-            )));
+            return Err(RepositoryError::NotFound(isbn_13.to_string()));
         }
 
         // isbnで一意に検索しているためインデックス0で指定
@@ -94,10 +99,7 @@ impl BookSearcher for BookSearcherForGoogleAPI {
 
         // Googleがisbn不一致でも良しなに変換してくれるが、ここでははじく
         if isbn_13 != book.isbn_13 {
-            return Err(RepositoryError::NotFound(format!(
-                "isbn13:{} is not found.",
-                isbn_13
-            )));
+            return Err(RepositoryError::NotFound(isbn_13.to_string()));
         }
 
         Ok(book)

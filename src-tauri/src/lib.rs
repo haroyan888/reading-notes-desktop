@@ -3,23 +3,22 @@ mod handler;
 mod repos;
 mod repos_impl;
 
-use std::{
-    fs,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
 use handler::book::{all_book, create_book, delete_book, find_book};
-use repos_impl::book::BookRepositoryForJson;
+use repos_impl::{book::BookRepositoryForJson, memo::MemoRepositoryForJson};
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let path = app.path().app_data_dir()?.join("book-repos.json");
-    if !path.is_file() {
-        fs::File::create(path.clone())?;
-    }
-    app.manage(Arc::new(Mutex::new(Box::new(BookRepositoryForJson::new(
-        path.to_str().unwrap(),
-    )))));
+    let base_dir = app.path().app_data_dir()?;
+    let book_repos_path = base_dir.join("book-repos.json");
+    app.manage(Arc::new(Mutex::new(BookRepositoryForJson::new(
+        book_repos_path.to_str().unwrap(),
+    )?)));
+    let memo_repos_path = base_dir.join("memo-repos.json");
+    app.manage(Arc::new(Mutex::new(MemoRepositoryForJson::new(
+        memo_repos_path.to_str().unwrap(),
+    )?)));
     Ok(())
 }
 

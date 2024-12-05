@@ -1,8 +1,18 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
 use super::super::entitiy::book::BookInfo;
-use super::RepositoryError;
+
+#[derive(Debug, Error)]
+pub enum RepositoryError {
+    #[error("Unexpected Error: [{0}]")]
+    Unexpected(String),
+    #[error("NotFound, isbn is {0}")]
+    NotFound(String),
+    #[error("Registered, isbn is {0}")]
+    Registered(String),
+}
 
 #[async_trait]
 pub trait BookRepository: Send + Sync + 'static {

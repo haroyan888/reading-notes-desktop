@@ -1,7 +1,17 @@
 use async_trait::async_trait;
+use thiserror::Error;
 
-use super::RepositoryError;
 use crate::entitiy::memo::Memo;
+
+#[derive(Debug, Error)]
+pub enum RepositoryError {
+    #[error("Unexpected Error: [{0}]")]
+    Unexpected(String),
+    #[error("NotFound, id is {0}")]
+    NotFound(String),
+    #[error("Registered, is is {0}")]
+    Registered(String),
+}
 
 #[async_trait]
 pub trait MemoRepository: Send + Sync + 'static {
