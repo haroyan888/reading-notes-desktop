@@ -8,6 +8,7 @@ use super::super::repos::{
     book::{BookRepository, BookSearcher, SearchBooksResult},
     RepositoryError,
 };
+use crate::repos_impl::{read, write};
 
 #[derive(Clone)]
 pub struct BookRepositoryForJson {
@@ -15,31 +16,53 @@ pub struct BookRepositoryForJson {
 }
 
 impl BookRepositoryForJson {
-    pub fn new(path: &str) -> Self {
+    pub fn new(path: &str) -> Result<Self, RepositoryError> {
         if !Path::new(path).is_file() {
-            fs::File::create(path).expect("ファイルの作成に失敗しました");
+            fs::File::create(path).map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
         }
-        BookRepositoryForJson {
+        Ok(BookRepositoryForJson {
             path: path.to_string(),
-        }
+        })
     }
 }
 
 #[async_trait]
 impl BookRepository for BookRepositoryForJson {
     async fn find(&self, isbn_13: &str) -> Result<BookInfo, RepositoryError> {
-        let file = fs::read(&self.path).map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
-        let data = serde_json::from_slice::<Vec<BookInfo>>(&file)
-            .map_err(|e| RepositoryError::Unexpected(e.to_string()))?;
+        let data = read::<BookInfo>(&self.path)?;
         let option_book = data
             .iter()
             .find(|&book| book.isbn_13 == isbn_13)
             .ok_or_else(|| RepositoryError::NotFound(format!("isbn:{} is not found", isbn_13)))?;
         Ok(option_book.clone())
     }
-    async fn find_all(&self) -> Result<Vec<BookInfo>, RepositoryError>;
-    async fn create(&self, payload: BookInfo) -> Result<BookInfo, RepositoryError>;
-    async fn delete(&self, isbn_13: &str) -> Result<(), RepositoryError>;
+
+    async fn all(&self) -> Result<Vec<BookInfo>, RepositoryError> {
+        Ok(read(&self.path)?)
+    }
+
+    async fn create(&self, payload: BookInfo) -> Result<BookInfo, RepositoryError> {
+        let mut data = read::<BookInfo>(&self.path)?;
+        data.push(payload.clone());
+        write::<BookInfo>(&self.path, data)?;
+        let new_data = read::<BookInfo>(&self.path)?;
+        let book_info = new_data
+            .iter()
+            .find(|&book| book.isbn_13 == payload.isbn_13)
+            .ok_or_else(|| RepositoryError::Unexpected("registration failed".to_string()))?;
+        Ok(book_info.clone())
+    }
+
+    async fn delete(&self, isbn_13: &str) -> Result<(), RepositoryError> {
+        let data = read::<BookInfo>(&self.path)?;
+        let removed_data = data
+            .iter()
+            .filter(|&book| book.isbn_13 != isbn_13)
+            .cloned()
+            .collect::<Vec<BookInfo>>();
+        write(&self.path, removed_data)?;
+        Ok(())
+    }
 }
 
 #[derive(Clone)]

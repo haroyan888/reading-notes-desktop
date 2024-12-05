@@ -1,46 +1,39 @@
 mod entitiy;
+mod handler;
 mod repos;
 mod repos_impl;
 
-use std::sync::{Arc, Mutex};
+use std::{
+    fs,
+    sync::{Arc, Mutex},
+};
+use tauri::Manager;
 
-type DiGreeter = Arc<Mutex<Box<dyn Greeter>>>;
+use handler::book::{all_book, create_book, delete_book, find_book};
+use repos_impl::book::BookRepositoryForJson;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(greeter: tauri::State<DiGreeter>, name: &str) -> String {
-    let greeter = greeter.lock().unwrap();
-    greeter.greet(name)
-}
-
-trait Greeter: Send + Sync {
-    fn greet(&self, name: &str) -> String;
-}
-#[warn(dead_code)]
-struct EnglishGreeter;
-
-impl Greeter for EnglishGreeter {
-    fn greet(&self, name: &str) -> String {
-        format!("Hello, {}! You've been greeted from Rust!", name)
+fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let path = app.path().app_data_dir()?.join("book-repos.json");
+    if !path.is_file() {
+        fs::File::create(path.clone())?;
     }
-}
-
-struct SpanishGreeter;
-
-impl Greeter for SpanishGreeter {
-    fn greet(&self, name: &str) -> String {
-        format!("Hola, {}! Has sido saludado desde Rust!", name)
-    }
+    app.manage(Arc::new(Mutex::new(Box::new(BookRepositoryForJson::new(
+        path.to_str().unwrap(),
+    )))));
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let greeter: DiGreeter = Arc::new(Mutex::new(Box::new(SpanishGreeter)));
-
     tauri::Builder::default()
-        .manage(greeter)
+        .setup(setup)
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            all_book,
+            find_book,
+            create_book,
+            delete_book
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -10,3 +10,19 @@ pub struct BookInfo {
     pub description: String,
     pub image_url: String,
 }
+
+impl std::fmt::Display for BookInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{\"isbn_13\":{},\"title\":\"{}\",\"authors\":\"{:?}\",\"publisher\":\"{}\",\"published_date\":\"{}\",\"description\":\"{}\",\"image_url\":\"{}\"}}",
+            self.isbn_13,
+            self.title,
+            self.authors,
+            self.publisher,
+            self.published_date,
+            self.description,
+            self.image_url
+        )
+    }
+}

@@ -1,22 +1,19 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
 
 use super::super::entitiy::book::BookInfo;
 use super::RepositoryError;
 
-pub type DiBookRepository = Arc<Mutex<Box<dyn BookRepository>>>;
-
 #[async_trait]
-pub trait BookRepository: Clone + Send + Sync + 'static {
+pub trait BookRepository: Send + Sync + 'static {
     async fn find(&self, isbn_13: &str) -> Result<BookInfo, RepositoryError>;
-    async fn find_all(&self) -> Result<Vec<BookInfo>, RepositoryError>;
+    async fn all(&self) -> Result<Vec<BookInfo>, RepositoryError>;
     async fn create(&self, payload: BookInfo) -> Result<BookInfo, RepositoryError>;
     async fn delete(&self, isbn_13: &str) -> Result<(), RepositoryError>;
 }
 
 #[async_trait]
-pub trait BookSearcher: Clone + Send + Sync + 'static {
+pub trait BookSearcher: Send + Sync + 'static {
     async fn find(&self, isbn_13: &str) -> Result<BookInfo, RepositoryError>;
 }
 
