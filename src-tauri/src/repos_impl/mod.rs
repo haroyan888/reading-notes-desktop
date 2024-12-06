@@ -1,5 +1,5 @@
 pub mod book;
-pub mod memo;
+pub mod reading_note;
 
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
