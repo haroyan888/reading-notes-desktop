@@ -6,15 +6,11 @@ mod repos_impl;
 use std::sync::{Arc, Mutex};
 use tauri::Manager;
 
-use handler::book::{all_book, create_book, delete_book, find_book};
-use handler::reading_note::{create_reading_note, delete_reading_note, get_reading_notes};
 use repos_impl::{book::BookRepositoryForJson, reading_note::ReadingNoteRepositoryForJson};
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    let base_dir = app.path().app_data_dir()?;
-    println!("dir: {}", base_dir.to_str().unwrap());
+    let base_dir = app.path().app_local_data_dir()?;
     let book_repos_path = base_dir.join("book-repos.json");
-    println!("path: {}", book_repos_path.to_str().unwrap());
     app.manage(Arc::new(Mutex::new(BookRepositoryForJson::new(
         book_repos_path.to_str().unwrap(),
     )?)));
@@ -31,13 +27,13 @@ pub fn run() {
         .setup(setup)
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            all_book,
-            find_book,
-            create_book,
-            delete_book,
-            get_reading_notes,
-            create_reading_note,
-            delete_reading_note,
+            handler::book::all_book,
+            handler::book::find_book,
+            handler::book::create_book,
+            handler::book::delete_book,
+            handler::reading_note::get_reading_notes,
+            handler::reading_note::create_reading_note,
+            handler::reading_note::delete_reading_note,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -1,9 +1,7 @@
 [[permission]]
-identifier = "main"
-description = "This describes the impact and more."
-commands.allow = [
-    "read_file"
-]
+identifier = "scope-appdata"
+description = """This scope permits access to all files and
+list content of top level directories in the `$HOME`folder."""
 
-[[scope.allow]]
-my-scope = "%APPDATA%/*"
+[[permission.scope.allow]]
+path = "$APPLOCALDATA/**"
