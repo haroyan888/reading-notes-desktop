@@ -12,7 +12,9 @@ use repos_impl::{book::BookRepositoryForJson, reading_note::ReadingNoteRepositor
 
 fn setup(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = app.path().app_data_dir()?;
+    println!("dir: {}", base_dir.to_str().unwrap());
     let book_repos_path = base_dir.join("book-repos.json");
+    println!("path: {}", book_repos_path.to_str().unwrap());
     app.manage(Arc::new(Mutex::new(BookRepositoryForJson::new(
         book_repos_path.to_str().unwrap(),
     )?)));
